@@ -10,8 +10,29 @@ class NeuralNet:
 
         self.encoder = (
             Encoder(height=self.height, width=self.width, channel=self.channel,
-                    ngpu=self.ngpu, z_dim=self.z_dim).to(self.device)
+                    ngpu=self.ngpu, ksize=self.ksize, z_dim=self.z_dim).to(self.device)
         )
+
+        self.decoder = (
+            Decoder(height=self.height, width=self.width, channel=self.channel,
+                    ngpu=self.ngpu, ksize=self.ksize, z_dim=self.z_dim).to(self.device)
+        )
+
+        self.models = [self.encoder, self.decoder]
+
+        for idx_m, model in enumerate(self.models):
+            if(self.device.type == 'cuda') and (self.models[idx_m].ngpu > 0):
+                self.models[idx_m] = nn.DataParallel(self.models[idx_m], list(range(self.models[idx_m].ngpu)))
+
+        self.num_params = 0
+        for idx_m, model in enumerate(self.models):
+            for p in model.parameters():
+                self.num_params += p.numel()
+            print(model)
+        print(f"The number of parameters : {self.num_params}")
+
+        self.params = list(self.encoder.parameters()) + list(self.decoder.parameters())
+        self.optimizer = optim.Adam(self.params, lr=self.learning_rate)
     
 class Flatten(nn.Module):
     def forward(self, input):
@@ -90,4 +111,23 @@ class Decoder(nn.Module):
             nn.ELU(),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
             nn.ELU(),
+
+            nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=self.ksize+1, stride=2, padding=1),
+            nn.ELU(),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.ELU(),
+
+            nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=self.ksize+1, stride=2, padding=1),
+            nn.ELU(),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.ELU(),
+            nn.Conv2d(in_channels=16, out_channels=self.channel, kernel_size=self.ksize, stride=1, padding=ksize//2),
+            nn.Sigmoid(),
         )
+
+    def forward(self, input):
+        dense_out = self.decoder_dense(input)
+        dense_res = dense_out.view(dense_out.size(0), 64, (self.height//(2**2)), (self.height//(2**2)))
+        x_hat = self.decoder_conv(dense_res)
+
+        return x_hat
