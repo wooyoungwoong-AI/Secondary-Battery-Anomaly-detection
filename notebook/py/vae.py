@@ -20,10 +20,12 @@ class NeuralNet:
 
         self.models = [self.encoder, self.decoder]
 
+        #gpu setting
         for idx_m, model in enumerate(self.models):
             if(self.device.type == 'cuda') and (self.models[idx_m].ngpu > 0):
                 self.models[idx_m] = nn.DataParallel(self.models[idx_m], list(range(self.models[idx_m].ngpu)))
 
+        #view params
         self.num_params = 0
         for idx_m, model in enumerate(self.models):
             for p in model.parameters():
@@ -78,6 +80,7 @@ class Encoder(nn.Module):
 
         return z_mu, z_sigma
     
+    #reparameterzation
     def sample_z(self, mu, sigma):
         epsilon = torch.randn_like(mu)
         sample = mu + (sigma * epsilon)
