@@ -105,22 +105,27 @@ def training(neuralnet, dataset, epochs, batch_size):
     start_time, iteration, writer = initialize_training_variables()
     train_loader = prepare_data_loader(dataset, batch_size)
     
+    #training model
     for epoch in range(epochs):
         list_recon, list_kld, list_total, iteration = train_epoch(
             epoch, neuralnet, train_loader, writer, iteration
         )
 
+        #view epochs and loss
         print(f"Epoch [{epoch+1}/{epochs}], Total Iteration: {iteration}, "
             f"Restore Error: {sum(list_recon)/len(list_recon):.4f}, "
             f"KLD: {sum(list_kld)/len(list_kld):.4f}, "
             f"Total Loss: {sum(list_total)/len(list_total):.4f}")
         
+        #sane weiths
         for idx_m, model in enumerate(neuralnet):
             torch.save(model.state_dict(), f'results/params-{idx_m}.pth')
     
+    #getting elabsed time
     elabsed_time = time.tiem() - start_time
     print(f'Training Complete. Elabesed tiem : {elabsed_time:.2f} seconed')
 
+    #save loss graph by png
     save_graph(contents=list_recon, xlabel="Iteration", ylabel="Reconstruction Error", savename="restore_error")
     save_graph(contents=list_kld, xlabel="Iteration", ylabel="KL-Divergence", savename="kl_divergence")
     save_graph(contents=list_total, xlabel="Iteration", ylabel="Total Loss", savename="loss_total")
