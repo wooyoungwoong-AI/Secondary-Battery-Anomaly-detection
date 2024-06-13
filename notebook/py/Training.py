@@ -3,10 +3,7 @@ import os, time
 import numpy as np
 
 import torch
-from torch.nn import functional as F
 from torch.utils.data import DataLoader
-from sklearn.decomposition import PCA
-from sklearn.metrics import roc_curve, auc
 
 from matplotlib import pyplot as plt
 
