@@ -49,10 +49,11 @@ def initialize_training_variables():
     writer = SummaryWriter()
     return start_time, iteration, writer
 
-def prepare_data_loader(dataset, batch_size, shuffle=True):
+def prepare_data_loaders(dataset, batch_size, shuffle=True):
     train_loder = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle)
     return train_loder
 
+#train
 def loss_function(x, x_hat, mu, sigma):
     x, x_hat, mu, sigma = x.cpu(), x_hat.cpu(), mu.cpu(), sigma.cpu()
     #복원오류 계산
@@ -70,6 +71,7 @@ def train_epoch(epoch, neuralnet, train_loader, writer, iteration):
         original_image = original_image.to(neuralnet.device)
         noisy_image = noisy_image.to(neuralnet.device)
 
+        #forward pass
         z_enc, z_mu, z_sigma = neuralnet.encoder(noisy_image)
         x_hat = neuralnet.decoder(z_enc)
 
@@ -100,32 +102,77 @@ def train_epoch(epoch, neuralnet, train_loader, writer, iteration):
     
     return list_recon, list_kld, list_total, iteration
 
-def training(neuralnet, dataset, epochs, batch_size):
+#test
+def prepare_test_loader(dataset, batch_size, shuffle=False):
+    test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle)
+    return test_loader
+
+def set_model_to_eval_model(model):
+    model.eval()
+
+def test_epoch(neuralnet, test_loader):
+    neuralnet.eval()
+    total_loss, total_kl_divergence, total_restore_error = 0, 0, 0
+
+    with torch.no_grad():
+        for origianl_image, noisy_image, transformed_images, noisy_image in test_loader:
+            origianl_image = origianl_image.to(neuralnet.device)
+            noisy_image = noisy_image.to(neuralnet.device)
+
+            #forward pass
+            z_enc, z_mu, z_sigma = neuralnet.encoder(noisy_image)
+            x_hat = neuralnet.decoder(z_enc)
+
+            #calculate loss
+            tot_loss, restore_error, kl_divergence = loss_function(
+                x=origianl_image, x_hat=x_hat, mu=z_mu, sigma=z_sigma
+            )
+
+            total_loss += tot_loss.item()
+            total_restore_error += restore_error.item()
+            total_kl_divergence += kl_divergence.item()
+
+    avg_loss = total_loss / len(test_loader)
+    avg_restore_error = total_restore_error / len(test_loader)
+    avg_kl_divergence = total_kl_divergence / len(test_loader)
+
+    print(f"Test Results - Average Loss: {avg_loss:.4f}, Average Restore Error: {avg_restore_error:.4f}, Average KL Divergence: {avg_kl_divergence:.4f}")
+
+    return avg_loss, avg_restore_error, avg_kl_divergence
+
+def save_test_results(avg_restore_error, avg_kl_divergence, avg_loss, filename="test_results.txt"):
+    with open(filename, 'w') as f:
+        f.write(f"Average Restore Error: {avg_restore_error:.4f}\n")
+        f.write(f"Average KL Divergence: {avg_kl_divergence:.4f}\n")
+        f.write(f"Average Loss: {avg_loss:.4f}\n")
+
+def training_and_testing(neuralnet, train_dataset, test_dataset, epochs, batch_size):
     create_makedirs()
-    start_time, iteration, writer = initialize_training_variables()
-    train_loader = prepare_data_loader(dataset, batch_size)
-    
-    #training model
+    start_time, writer, iteration = initialize_training_variables()
+    train_loader = prepare_data_loaders(train_dataset, batch_size)
+    test_loader = prepare_test_loader(test_dataset, batch_size)
+
     for epoch in range(epochs):
         list_recon, list_kld, list_total, iteration = train_epoch(
             epoch, neuralnet, train_loader, writer, iteration
         )
 
-        #view epochs and loss
         print(f"Epoch [{epoch+1}/{epochs}], Total Iteration: {iteration}, "
-            f"Restore Error: {sum(list_recon)/len(list_recon):.4f}, "
-            f"KLD: {sum(list_kld)/len(list_kld):.4f}, "
-            f"Total Loss: {sum(list_total)/len(list_total):.4f}")
-        
-        #sane weiths
-        for idx_m, model in enumerate(neuralnet):
-            torch.save(model.state_dict(), f'results/params-{idx_m}.pth')
-    
-    #getting elabsed time
-    elabsed_time = time.tiem() - start_time
-    print(f'Training Complete. Elabesed tiem : {elabsed_time:.2f} seconed')
+              f"Restore Error: {sum(list_recon)/len(list_recon):.4f}, "
+              f"KLD: {sum(list_kld)/len(list_kld):.4f}, "
+              f"Total Loss: {sum(list_total)/len(list_total):.4f}")
 
-    #save loss graph by png
+        #model save
+        for idx_m, model in enumerate(neuralnet.models):
+            torch.save(model.state_dict(), f"results/params-{idx_m}.pth")
+
+    #test
+    avg_loss, avg_restore_error, avg_kl_divergence = test_epoch(neuralnet, test_loader)
+    save_test_results(avg_restore_error, avg_kl_divergence, avg_loss)
+
+    elapsed_time = time.time() - start_time
+    print(f"Training and testing complete. Elapsed time: {elapsed_time:.2f} seconds")
+
     save_graph(contents=list_recon, xlabel="Iteration", ylabel="Reconstruction Error", savename="restore_error")
     save_graph(contents=list_kld, xlabel="Iteration", ylabel="KL-Divergence", savename="kl_divergence")
     save_graph(contents=list_total, xlabel="Iteration", ylabel="Total Loss", savename="loss_total")
