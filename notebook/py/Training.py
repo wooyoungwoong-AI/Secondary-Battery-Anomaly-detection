@@ -1,13 +1,29 @@
 import os, time
 
+import numpy as np
+
 import torch
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from sklearn.decomposition import PCA
 from sklearn.metrics import roc_curve, auc
 
+from matplotlib import pyplot as plt
+
 from torch.utils.tensorboard import SummaryWriter
 
+
+def save_graph(contents, xlabel, ylabel, savename):
+
+    np.save(savename, np.asarray(contents))
+    plt.clf()
+    plt.rcParams['font.size'] = 15
+    plt.plot(contents, color='blue', linestyle="-", label="loss")
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.tight_layout(pad=1, w_pad=1, h_pad=1)
+    plt.savefig("%s.png" %(savename))
+    plt.close()
 
 def make_dir(path):
 
@@ -57,6 +73,7 @@ def train_epoch(epoch, neuralnet, train_loader, writer, iteration):
         z_enc, z_mu, z_sigma = neuralnet.encoder(noisy_image)
         x_hat = neuralnet.decoder(z_enc)
 
+        #calculate loss
         total_loss, restore_error, kl_divergence = loss_function(
             x = original_image, x_hat=x_hat, mu=z_mu, sigma=z_sigma
         )
@@ -65,6 +82,7 @@ def train_epoch(epoch, neuralnet, train_loader, writer, iteration):
         total_loss.backward()
         neuralnet.step()
 
+        #record error
         list_recon.append(restore_error.item())
         list_kld.append(kl_divergence.item())
         list_total.append(total_loss.item())
@@ -81,3 +99,28 @@ def train_epoch(epoch, neuralnet, train_loader, writer, iteration):
                   f'Restore Error : {restore_error.item():.4f}, KLD : {kl_divergence.item():.4f}, Total Loss : {total_loss.item():.4f}')
     
     return list_recon, list_kld, list_total, iteration
+
+def training(neuralnet, dataset, epochs, batch_size):
+    create_makedirs()
+    start_time, iteration, writer = initialize_training_variables()
+    train_loader = prepare_data_loader(dataset, batch_size)
+    
+    for epoch in range(epochs):
+        list_recon, list_kld, list_total, iteration = train_epoch(
+            epoch, neuralnet, train_loader, writer, iteration
+        )
+
+        print(f"Epoch [{epoch+1}/{epochs}], Total Iteration: {iteration}, "
+            f"Restore Error: {sum(list_recon)/len(list_recon):.4f}, "
+            f"KLD: {sum(list_kld)/len(list_kld):.4f}, "
+            f"Total Loss: {sum(list_total)/len(list_total):.4f}")
+        
+        for idx_m, model in enumerate(neuralnet):
+            torch.save(model.state_dict(), f'results/params-{idx_m}.pth')
+    
+    elabsed_time = time.tiem() - start_time
+    print(f'Training Complete. Elabesed tiem : {elabsed_time:.2f} seconed')
+
+    save_graph(contents=list_recon, xlabel="Iteration", ylabel="Reconstruction Error", savename="restore_error")
+    save_graph(contents=list_kld, xlabel="Iteration", ylabel="KL-Divergence", savename="kl_divergence")
+    save_graph(contents=list_total, xlabel="Iteration", ylabel="Total Loss", savename="loss_total")
