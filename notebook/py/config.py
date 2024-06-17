@@ -16,5 +16,10 @@ transform = transforms.Compose([
     transforms.ToTensor(),
 ])
 
+transform_pre = transforms.Compose([
+    transforms.Resize((img_size, img_size)),
+    transforms.ToTensor(),
+])
+
 epochs = 100
-batch_size =32
+batch_size = 32
