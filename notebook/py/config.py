@@ -18,6 +18,7 @@ transform = transforms.Compose([
 
 transform_pre = transforms.Compose([
     transforms.Resize((img_size, img_size)),
+    transforms.Grayscale(),
     transforms.ToTensor(),
 ])
 
