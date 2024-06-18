@@ -20,26 +20,35 @@ class NeuralNet:
 
         self.models = [self.encoder, self.decoder]
 
-        #gpu setting
+        # GPU 설정
         for idx_m, model in enumerate(self.models):
-            if(self.device.type == 'cuda') and (self.models[idx_m].ngpu > 0):
-                self.models[idx_m] = nn.DataParallel(self.models[idx_m], list(range(self.models[idx_m].ngpu)))
+            if self.device.type == 'cuda' and getattr(model, 'ngpu', 0) > 0:
+                self.models[idx_m] = nn.DataParallel(model, list(range(model.ngpu)))
 
-        #view params
+        # 파라미터 수 출력
         self.num_params = 0
         for idx_m, model in enumerate(self.models):
             for p in model.parameters():
                 self.num_params += p.numel()
-            print(model)
-        print(f"The number of parameters : {self.num_params}")
+        print(f"The number of parameters: {self.num_params}")
 
         self.params = list(self.encoder.parameters()) + list(self.decoder.parameters())
         self.optimizer = optim.Adam(self.params, lr=self.learning_rate)
     
+    # def to(self, device):
+    #     for model in self.models:
+    #         model.to(device)
+    #     self.decoder = device
+    #     return self
+
+    def train(self, mode=True):
+        for model in self.models:
+            model.train(mode)
+
+    
 class Flatten(nn.Module):
     def forward(self, input):
-        flatten = nn.Flatten()
-        return flatten(input)
+        return input.view(input.size(0), -1)
     
 class Encoder(nn.Module):
     def __init__(self, height, width, channel, ngpu, ksize, z_dim):
@@ -67,9 +76,12 @@ class Encoder(nn.Module):
             nn.ELU(),
         )
 
+        conv_height_size = self.height // (2**2)
+        conv_width_size = self.width // (2**2)
+
         self.encoder_dense = nn.Sequential(
             Flatten(),
-            nn.Linear((self.height//(2**2))*(self.width//(2**2))*self.channel*64, 512),
+            nn.Linear(123 * 123 * 64, 512),
             nn.ELU(),
             nn.Linear(512, self.z_dim*2)
         )
@@ -89,9 +101,11 @@ class Encoder(nn.Module):
     
     def forward(self, input):
         conv_out = self.encoder_conv(input)
+        # print(conv_out.shape) 32, 64, 123, 123
         z_params = self.encoder_dense(conv_out)
         z_mu, z_sigma = self.split_z(z_params)
         z_sample = self.sample_z(mu=z_mu, sigma=z_sigma)
+        # print(z_sample.shape) 32, 20
 
         return z_sample, z_mu, z_sigma
     
