@@ -119,7 +119,7 @@ class Decoder(nn.Module):
         self.decoder_dense = nn.Sequential(
             nn.Linear(self.z_dim, 512),
             nn.ELU(),
-            nn.Linear(512, (self.height//(2**2))*(self.width//(2**2))*self.channel*64),
+            nn.Linear(512, (self.height//(2**2))*(self.width//(2**2))*64),
             nn.ELU()
         )
 
@@ -129,12 +129,12 @@ class Decoder(nn.Module):
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
             nn.ELU(),
 
-            nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=self.ksize+1, stride=2, padding=1),
+            nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=self.ksize+1, stride=2, padding=1, output_padding=1),
             nn.ELU(),
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
             nn.ELU(),
 
-            nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=self.ksize+1, stride=2, padding=1),
+            nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=self.ksize+1, stride=2, padding=1, output_padding=1),
             nn.ELU(),
             nn.Conv2d(in_channels=16, out_channels=16, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
             nn.ELU(),
