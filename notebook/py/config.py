@@ -1,6 +1,9 @@
 import torch
 from torchvision import transforms
 
+normal_root_dir = r'D:\PPJ\Model\data\Normal'
+root_dir = r'D\PPJ\Model\data'
+
 height, width, channel = 480, 480, 1
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ngpu = 1
