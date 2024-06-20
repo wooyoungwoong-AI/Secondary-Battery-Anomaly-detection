@@ -3,10 +3,11 @@ import torch.nn as nn
 import torch.optim as optim
 
 class NeuralNet:
-    def __init__(self, height, width, channel, device, ngpu, ksize, z_dim, learning_rate=1e-3):
+    def __init__(self, height, width, channel, device, ngpu, ksize, z_dim, avg_pool,learning_rate=1e-3):
         self.height, self.width, self.channel = height, width, channel
         self.device, self.ngpu = device, ngpu
         self.ksize, self.z_dim, self.learning_rate = ksize, z_dim, learning_rate
+        self.avg_pool = avg_pool
 
         self.encoder = (
             Encoder(height=self.height, width=self.width, channel=self.channel,
@@ -15,7 +16,7 @@ class NeuralNet:
 
         self.decoder = (
             Decoder(height=self.height, width=self.width, channel=self.channel,
-                    ngpu=self.ngpu, ksize=self.ksize, z_dim=self.z_dim).to(self.device)
+                    ngpu=self.ngpu, ksize=self.ksize, z_dim=self.z_dim, avg_pool=self.avg_pool).to(self.device)
         )
 
         self.models = [self.encoder, self.decoder]
@@ -33,13 +34,18 @@ class NeuralNet:
         print(f"The number of parameters: {self.num_params}")
 
         self.params = list(self.encoder.parameters()) + list(self.decoder.parameters())
-        self.optimizer = optim.Adam(self.params, lr=self.learning_rate)
+        # self.optimizer = optim.Adam(self.params, lr=self.learning_rate)
     
-    # def to(self, device):
-    #     for model in self.models:
-    #         model.to(device)
-    #     self.decoder = device
-    #     return self
+    def to(self, device):
+        for idx_m, model in enumerate(self.models):
+            self.models[idx_m] = model.to(device)
+        self.device = device
+
+        self.optimizer = optim.Adam(self.params, lr=self.learning_rate)
+        for state in self.optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to(device)
 
     def train(self, mode=True):
         for model in self.models:
@@ -76,9 +82,6 @@ class Encoder(nn.Module):
             nn.ELU(),
         )
 
-        conv_height_size = self.height // (2**2)
-        conv_width_size = self.width // (2**2)
-
         self.encoder_dense = nn.Sequential(
             Flatten(),
             nn.Linear(123 * 123 * 64, 512),
@@ -110,11 +113,12 @@ class Encoder(nn.Module):
         return z_sample, z_mu, z_sigma
     
 class Decoder(nn.Module):
-    def __init__(self, height, width, channel, ngpu, ksize, z_dim):
+    def __init__(self, height, width, channel, ngpu, ksize, z_dim, avg_pool):
         super(Decoder, self).__init__()
 
         self.height, self.width, self.channel = height, width, channel
         self.ngpu, self.ksize, self.z_dim = ngpu, ksize, z_dim
+        self.avg_pool = avg_pool
 
         self.decoder_dense = nn.Sequential(
             nn.Linear(self.z_dim, 512),
@@ -144,7 +148,8 @@ class Decoder(nn.Module):
 
     def forward(self, input):
         dense_out = self.decoder_dense(input)
-        dense_res = dense_out.view(dense_out.size(0), 64, (self.height//(2**2)), (self.height//(2**2)))
+        dense_res = dense_out.view(dense_out.size(0), 64, (self.height//(2**2)), (self.width//(2**2)))
         x_hat = self.decoder_conv(dense_res)
-
+        # print(x_hat.shape) torch.Size([32, 1, 498, 498])
+        x_hat = self.avg_pool(x_hat)
         return x_hat
