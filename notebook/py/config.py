@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from torchvision import transforms
 
 normal_root_dir = r'D:\PPJ\Model\data\Normal'
@@ -29,3 +30,5 @@ transform_pre = transforms.Compose([
 
 epochs = 100
 batch_size = 32
+
+avg_pool = nn.AdaptiveAvgPool2d((480, 480))
