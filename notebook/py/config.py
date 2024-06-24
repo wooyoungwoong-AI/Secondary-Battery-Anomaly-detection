@@ -19,16 +19,15 @@ transform = transforms.Compose([
     transforms.Resize((img_size, img_size)),
     transforms.Grayscale(),
     transforms.ToTensor(),
+    transforms.Normalize((0.0), (1.0))
 ])
 
 transform_pre = transforms.Compose([
     transforms.Resize((img_size, img_size)),
     transforms.Grayscale(),
     transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
+    transforms.Normalize((0.0,), (1.0,))
 ])
 
 epochs = 100
 batch_size = 32
-
-avg_pool = nn.AdaptiveAvgPool2d((480, 480))
