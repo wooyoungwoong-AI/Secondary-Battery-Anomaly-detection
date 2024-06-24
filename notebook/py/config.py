@@ -19,14 +19,14 @@ transform = transforms.Compose([
     transforms.Resize((img_size, img_size)),
     transforms.Grayscale(),
     transforms.ToTensor(),
-    transforms.Normalize((0.0), (1.0))
+    # transforms.Normalize((0.0), (1.0))
 ])
 
 transform_pre = transforms.Compose([
     transforms.Resize((img_size, img_size)),
     transforms.Grayscale(),
     transforms.ToTensor(),
-    transforms.Normalize((0.0,), (1.0,))
+    # transforms.Normalize((0.0,), (1.0,))
 ])
 
 epochs = 100
