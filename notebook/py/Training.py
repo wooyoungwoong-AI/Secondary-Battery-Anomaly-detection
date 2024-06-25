@@ -39,7 +39,7 @@ def prepare_data_loaders(dataset, batch_size, shuffle=True):
 
 def loss_function(x, x_hat, mu, sigma):
     x, x_hat, mu, sigma = x.cpu(), x_hat.cpu(), mu.cpu(), sigma.cpu()
-    restore_error = torch.nn.functional.binary_cross_entropy(x_hat, x, reduction='sum')
+    restore_error = torch.nn.functional.mse_loss(x_hat, x, reduction='mean')
     kl_divergence = 0.5 * torch.sum(mu**2 + sigma**2 - torch.log(sigma**2 + 1e-12) - 1, dim=1)
     return torch.mean(restore_error + kl_divergence), torch.mean(restore_error), torch.mean(kl_divergence)
 
