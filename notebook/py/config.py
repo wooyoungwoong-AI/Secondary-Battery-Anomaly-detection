@@ -9,8 +9,8 @@ root_dir = r'D\PPJ\Model\data'
 height, width, channel = 480, 480, 1
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ngpu = 1
-ksize = 4
-z_dim = 20
+# ksize = 4
+# z_dim = 20
 learning_rate = 1e-3
 
 img_size = 480
