@@ -1,21 +1,22 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 
 class NeuralNet:
-    def __init__(self, height, width, channel, device, ngpu, ksize, z_dim, learning_rate=1e-3):
+    def __init__(self, height, width, channel, device, ngpu, learning_rate=1e-3):
         self.height, self.width, self.channel = height, width, channel
         self.device, self.ngpu = device, ngpu
-        self.ksize, self.z_dim, self.learning_rate = ksize, z_dim, learning_rate
+        self.learning_rate = learning_rate
 
         self.encoder = (
             Encoder(height=self.height, width=self.width, channel=self.channel,
-                    ngpu=self.ngpu, ksize=self.ksize, z_dim=self.z_dim).to(self.device)
+                    ngpu=self.ngpu).to(self.device)
         )
 
         self.decoder = (
             Decoder(height=self.height, width=self.width, channel=self.channel,
-                    ngpu=self.ngpu, ksize=self.ksize, z_dim=self.z_dim).to(self.device)
+                    ngpu=self.ngpu).to(self.device)
         )
 
         self.models = [self.encoder, self.decoder]
@@ -56,53 +57,34 @@ class Flatten(nn.Module):
         return input.view(input.size(0), -1)
     
 class Encoder(nn.Module):
-    def __init__(self, height, width, channel, ngpu, ksize, z_dim):
+    def __init__(self, height, width, channel, ngpu):
         super(Encoder, self).__init__()
 
         self.height, self.width, self.channel = height, width, channel
-        self.ngpu, self.ksize, self.z_dim = ngpu, ksize, z_dim
+        self.ngpu = ngpu
 
         self.encoder_conv = nn.Sequential(
-            nn.Conv2d(in_channels=self.channel, out_channels=16, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.Conv2d(in_channels=self.channel, out_channels=16, kernel_size=5, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
-            nn.ELU(),
-            nn.MaxPool2d(2),
-
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
-            nn.ELU(),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding='same'),
             nn.ELU(),
             nn.MaxPool2d(2),
 
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
+            nn.MaxPool2d(4),
+
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
+            nn.MaxPool2d(4),
         )
 
-        self.conv_mu = nn.Conv2d(64, z_dim, kernel_size=1)
-        self.conv_sigma = nn.Conv2d(64, z_dim, kernel_size=1)
-
-        # self.encoder_dense = nn.Sequential(
-        #     Flatten(),
-        #     nn.Linear(123 * 123 * 64, 512),
-        #     nn.ELU(),
-        #     nn.Linear(512, self.z_dim*2)
-        # )
-
-    # def split_z(self, z):
-    #     z_mu = z[:, :self.z_dim]
-    #     z_sigma = z[:, self.z_dim:]
-
-    #     return z_mu, z_sigma
-    
-    # #reparameterzation
-    # def sample_z(self, mu, sigma):
-    #     epsilon = torch.randn_like(mu)
-    #     sample = mu + (sigma * epsilon)
-
-    #     return sample
+        self.conv_mu = nn.Conv2d(64, 20, kernel_size=1)
+        self.conv_sigma = nn.Conv2d(64, 20, kernel_size=1)
     
     def forward(self, input):
         conv_out = self.encoder_conv(input)
@@ -112,44 +94,41 @@ class Encoder(nn.Module):
         z_sample = mu + sigma * epsilon
 
         return z_sample, mu, sigma
-    
+
 class Decoder(nn.Module):
-    def __init__(self, height, width, channel, ngpu, ksize, z_dim):
+    def __init__(self, height, width, channel, ngpu):
         super(Decoder, self).__init__()
 
         self.height, self.width, self.channel = height, width, channel
-        self.ngpu, self.ksize, self.z_dim = ngpu, ksize, z_dim
-
-        # self.decoder_dense = nn.Sequential(
-        #     nn.Linear(self.z_dim, 512),
-        #     nn.ELU(),
-        #     nn.Linear(512, (self.height//(2**2))*(self.width//(2**2))*64),
-        #     nn.ELU()
-        # )
+        self.ngpu = ngpu
 
         self.decoder_dense = nn.Sequential(
-            nn.Conv2d(in_channels=z_dim, out_channels=64, kernel_size=1),
+            nn.Conv2d(in_channels=20, out_channels=20, kernel_size=1, padding='same'),
             nn.ELU()
         )
 
         self.decoder_conv = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.Conv2d(in_channels=20, out_channels=20, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.Conv2d(in_channels=20, out_channels=64, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=self.ksize+1, stride=2, padding=1, output_padding=1),
+            nn.Upsample(scale_factor=4, mode='nearest'),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=self.ksize+1, stride=2, padding=1, output_padding=1),
+            nn.Upsample(scale_factor=4, mode='nearest'),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
+            nn.Conv2d(in_channels=32, out_channels=16, kernel_size=5, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=16, out_channels=self.channel, kernel_size=self.ksize, stride=1, padding=self.ksize//2),
-            # nn.AdaptiveAvgPool2d((height, width)),
-            nn.Sigmoid()
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding='same'),
+            nn.ELU(),
+            nn.Conv2d(in_channels=16, out_channels=self.channel, kernel_size=5, stride=1, padding='same'),
+            nn.ELU(),
         )
-    
+
     def forward(self, input):
         dense_out = self.decoder_dense(input)
         x_hat = self.decoder_conv(dense_out)
