@@ -113,16 +113,19 @@ class Decoder(nn.Module):
             nn.Conv2d(in_channels=20, out_channels=64, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Upsample(scale_factor=4, mode='nearest'),
+
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Upsample(scale_factor=4, mode='nearest'),
+
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding='same'),
             nn.ELU(),
             nn.Conv2d(in_channels=32, out_channels=16, kernel_size=5, stride=1, padding='same'),
             nn.ELU(),
             nn.Upsample(scale_factor=2, mode='nearest'),
+            
             nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding='same'),
             nn.ELU(),
             nn.Conv2d(in_channels=16, out_channels=self.channel, kernel_size=5, stride=1, padding='same'),
