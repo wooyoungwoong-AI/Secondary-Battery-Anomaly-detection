@@ -34,18 +34,12 @@ class NeuralNet:
         print(f"The number of parameters: {self.num_params:.4f}")
 
         self.params = list(self.encoder.parameters()) + list(self.decoder.parameters())
-        # self.optimizer = optim.Adam(self.params, lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.params, lr=self.learning_rate)
     
     def to(self, device):
         for idx_m, model in enumerate(self.models):
             self.models[idx_m] = model.to(device)
         self.device = device
-
-        self.optimizer = optim.Adam(self.params, lr=self.learning_rate)
-        for state in self.optimizer.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.to(device)
 
     def train(self, mode=True):
         for model in self.models:
@@ -64,36 +58,42 @@ class Encoder(nn.Module):
         self.ngpu = ngpu
 
         self.encoder_conv = nn.Sequential(
-            nn.Conv2d(in_channels=self.channel, out_channels=16, kernel_size=5, stride=1, padding='same'),
+            nn.Conv2d(in_channels=self.channel, out_channels=4, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding='same'),
+            nn.Conv2d(in_channels=4, out_channels=4, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.MaxPool2d(2),
 
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(in_channels=4, out_channels=8, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(in_channels=8, out_channels=8, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.MaxPool2d(4),
 
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.MaxPool2d(4),
+
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
+            nn.MaxPool2d(3),
         )
 
-        self.conv_mu = nn.Conv2d(64, 20, kernel_size=1)
-        self.conv_sigma = nn.Conv2d(64, 20, kernel_size=1)
+        # self.conv_mu = nn.Conv2d(16, 16, kernel_size=1)
+        # self.conv_sigma = nn.Conv2d(16, 16, kernel_size=1)
     
     def forward(self, input):
         conv_out = self.encoder_conv(input)
-        mu = self.conv_mu(conv_out)
-        sigma = torch.exp(0.5 * self.conv_sigma(conv_out))
-        epsilon = torch.randn_like(sigma)
-        z_sample = mu + sigma * epsilon
+        # mu = self.conv_mu(conv_out)
+        # sigma = torch.exp(0.5 * self.conv_sigma(conv_out))
+        # epsilon = torch.randn_like(sigma)
+        # z_sample = mu + sigma * epsilon
 
-        return z_sample, mu, sigma
+        return conv_out
 
 class Decoder(nn.Module):
     def __init__(self, height, width, channel, ngpu):
@@ -103,32 +103,38 @@ class Decoder(nn.Module):
         self.ngpu = ngpu
 
         self.decoder_dense = nn.Sequential(
-            nn.Conv2d(in_channels=20, out_channels=20, kernel_size=1, padding='same'),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, padding='same'),
             nn.ELU()
         )
 
         self.decoder_conv = nn.Sequential(
-            nn.Conv2d(in_channels=20, out_channels=20, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=20, out_channels=64, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
+            nn.Upsample(scale_factor=3, mode='nearest'),
+
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Upsample(scale_factor=4, mode='nearest'),
 
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding='same'),
+            nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Upsample(scale_factor=4, mode='nearest'),
 
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=1, padding='same'),
+            nn.Conv2d(in_channels=8, out_channels=8, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=32, out_channels=16, kernel_size=5, stride=1, padding='same'),
+            nn.Conv2d(in_channels=8, out_channels=4, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Upsample(scale_factor=2, mode='nearest'),
-            
-            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5, stride=1, padding='same'),
+
+            nn.Conv2d(in_channels=4, out_channels=4, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=16, out_channels=self.channel, kernel_size=5, stride=1, padding='same'),
+            nn.Conv2d(in_channels=4, out_channels=self.channel, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
         )
 
