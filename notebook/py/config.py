@@ -29,5 +29,5 @@ transform_pre = transforms.Compose([
     # transforms.Normalize((0.0,), (1.0,))
 ])
 
-epochs = 100
+epochs = 15
 batch_size = 32
