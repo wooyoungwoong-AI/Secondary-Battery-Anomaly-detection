@@ -68,19 +68,19 @@ class Encoder(nn.Module):
             nn.ELU(),
             nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.MaxPool2d(4),
+            # nn.MaxPool2d(4),
 
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
-            nn.ELU(),
-            nn.MaxPool2d(4),
+            # nn.MaxPool2d(4),
 
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.MaxPool2d(3),
+            # nn.MaxPool2d(3),
         )
 
         # self.conv_mu = nn.Conv2d(16, 16, kernel_size=1)
@@ -112,23 +112,23 @@ class Decoder(nn.Module):
             nn.ELU(),
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Upsample(scale_factor=3, mode='nearest'),
-
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
-            nn.ELU(),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
-            nn.ELU(),
-            nn.Upsample(scale_factor=4, mode='nearest'),
+            # nn.Upsample(scale_factor=3, mode='nearest'),
 
             nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Conv2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
-            nn.Upsample(scale_factor=4, mode='nearest'),
+            # nn.Upsample(scale_factor=4, mode='nearest'),
 
             nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
+            # nn.Upsample(scale_factor=4, mode='nearest'),
+
             nn.Conv2d(in_channels=16, out_channels=8, kernel_size=3, stride=1, padding='same'),
+            nn.ELU(),
+            nn.Conv2d(in_channels=8, out_channels=8, kernel_size=3, stride=1, padding='same'),
             nn.ELU(),
             nn.Upsample(scale_factor=2, mode='nearest'),
 
