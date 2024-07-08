@@ -41,7 +41,7 @@
 #### 가우시안 노이즈 추가
 이미지의 각 회전된 버전에 가우시안 노이즈를 적용하여 데이터의 다양성을 증가시킵니다.
 
-각 증강 방법 및 이미지 정규화에 대해서는 여기서 볼 수 있습니다. [**_Custom Dataset_**](https://github.com/MBV-and-Kids/Model/blob/main/notebook/CNNCustomDataset.ipynb)
+* 각 증강 방법 및 이미지 정규화에 대해서는 여기서 볼 수 있습니다. [**_Custom Dataset_**](https://github.com/MBV-and-Kids/Model/blob/main/notebook/CNNCustomDataset.ipynb)
 ---
 
 ### Data Statistics
