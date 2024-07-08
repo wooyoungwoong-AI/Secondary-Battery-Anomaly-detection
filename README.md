@@ -42,8 +42,9 @@
 이미지의 각 회전된 버전에 가우시안 노이즈를 적용하여 데이터의 다양성을 증가시킵니다.
 
 * 각 증강 방법 및 이미지 정규화에 대해서는 여기서 볼 수 있습니다. [**_Custom Dataset_**](https://github.com/MBV-and-Kids/Model/blob/main/notebook/CNNCustomDataset.ipynb)
+* GAN을 이용하여 Generate 한 코드는 여기서 볼 수 있습니다. [**_GAN_**](https://github.com/MBV-and-Kids/Model/blob/main/notebook/GAN/GANCreateGood.ipynb)
 ---
 
 ### Data Statistics
 
-<>
+<![image_cnt_graph](https://github.com/MBV-and-Kids/Model/assets/136695011/763484b1-f423-4f96-96c3-8d3d5e0a099a)>
