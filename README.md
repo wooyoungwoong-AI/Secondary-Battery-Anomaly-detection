@@ -50,6 +50,4 @@ make by [**_JKpon_**](https://github.com/orgs/MBV-and-Kids/people/LeeJeGg)
 
 <img width="364" alt="roc" src="https://github.com/wooyoungwoong-AI/wooyoungwoong-AI/assets/136695011/c9b1a574-1038-460f-ac34-7fa2cd34c52d">
 
----
-
 make by [**_YoungWoong_**](https://github.com/wooyoungwoong-AI)
