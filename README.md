@@ -1,3 +1,5 @@
+## Data 및 Model Part에 대한 진행사항, 결과물
+
 [**_Model 제작 과정 및 결과_**](https://github.com/MBV-and-Kids/Model/blob/main/model.md)
 
 ---
